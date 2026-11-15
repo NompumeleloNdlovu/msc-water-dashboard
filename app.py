@@ -166,7 +166,7 @@ def priority_at(ranking, n):
 
 
 PAGES = [
-    "Overview",
+    "Home",
     "Predicted risk",
     "Budget simulator",
     "Budget sensitivity",
@@ -186,14 +186,6 @@ st.sidebar.markdown(
 )
 page = st.sidebar.radio("View", PAGES, label_visibility="collapsed")
 
-with st.sidebar.expander("About this dashboard"):
-    st.write(
-        "Scores come from a random forest trained on assessed pipeline assets. "
-        "They are model-based priority scores, not calibrated probabilities of failure. "
-        "Scores for assets without an assessment are extrapolations. "
-        "Cost values are used as recorded and treated as rand, so budget amounts are indicative."
-    )
-
 st.markdown(
     f"""
     <div class="hero">
@@ -204,7 +196,34 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-if page == "Overview":
+if page == "Home":
+    with st.container(border=True):
+        st.subheader("About this dashboard")
+        st.write(
+            "This dashboard supports maintenance planning for South Africa's national bulk water pipelines. "
+            "A random forest model trained on assessed pipeline assets gives each asset a priority score, "
+            "and a budget-constrained selection rule chooses which assets to maintain first."
+        )
+        about_left, about_right = st.columns(2)
+        with about_left:
+            st.markdown("**What is in each view**")
+            st.markdown(
+                "- **Predicted risk:** scores for assets without an assessment\n"
+                "- **Budget simulator:** which assets a chosen budget would cover\n"
+                "- **Budget sensitivity:** how the benefit grows with the budget\n"
+                "- **Model performance:** accuracy on held-out assessed assets\n"
+                "- **Optimised vs reactive:** the model-led plan against a simulated random order\n"
+                "- **Authority view:** how scores differ between water service authorities"
+            )
+        with about_right:
+            st.markdown("**How to read the results**")
+            st.markdown(
+                "- Scores are model-based priority scores, not calibrated probabilities of failure.\n"
+                "- Scores for assets without an assessment are extrapolations from the assessed assets.\n"
+                "- Costs are used as recorded and treated as rand, so budget amounts are indicative.\n"
+                "- The reactive strategy is a simulated random order, not an observed practice."
+            )
+    st.subheader("National overview")
     st.caption("National bulk pipeline records and how much of them has a condition assessment.")
     assets = load_assets()
     n_assessed = int((assets["Assessment"] == "Assessed").sum())
