@@ -2,35 +2,76 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 import streamlit as st
 
 DATA_DIR = "saved_outputs"
 PROB = "predicted_maintenance_probability"
 WSA = "Water Service Authority Name"
 
-BLUE = "#0B6E99"
-TEAL = "#2A9D8F"
-AMBER = "#E9A23B"
-GREY = "#8A9BA5"
-RED = "#C8553D"
+BLUE = "#2a78d6"
+ORANGE = "#eb6834"
+GREY = "#b4bcc4"
+INK = "#0f2a3d"
+INK2 = "#52606d"
+GRID = "#e6ebf0"
 
-st.set_page_config(page_title="Water Infrastructure Maintenance Dashboard", layout="wide")
+st.set_page_config(page_title="Water Infrastructure Maintenance", page_icon="💧", layout="wide")
 
 plt.rcParams.update({
+    "figure.dpi": 200,
+    "figure.facecolor": "white",
+    "axes.facecolor": "white",
     "axes.spines.top": False,
     "axes.spines.right": False,
+    "axes.spines.left": False,
+    "axes.edgecolor": GRID,
+    "axes.labelcolor": INK2,
+    "axes.labelsize": 9,
     "axes.grid": True,
+    "axes.grid.axis": "y",
     "axes.axisbelow": True,
-    "grid.color": "#E3EAEE",
-    "axes.edgecolor": GREY,
-    "font.size": 10,
+    "grid.color": GRID,
+    "grid.linewidth": 0.8,
+    "xtick.color": INK2,
+    "ytick.color": INK2,
+    "xtick.labelsize": 8.5,
+    "ytick.labelsize": 8.5,
+    "xtick.major.size": 0,
+    "ytick.major.size": 0,
+    "legend.frameon": False,
+    "legend.fontsize": 8.5,
+    "text.color": INK2,
+    "font.size": 9,
 })
 
 st.markdown(
     """
     <style>
-    [data-testid="stMetric"] {background-color: #EEF4F7; padding: 12px 16px; border-radius: 8px;}
-    h1 {font-size: 2rem;}
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {font-family: 'Inter', sans-serif;}
+    [data-testid="stAppViewContainer"] {background: #f5f7fa;}
+    [data-testid="stHeader"] {background: transparent;}
+    .block-container {padding-top: 1.6rem; max-width: 1280px;}
+    [data-testid="stSidebar"] {background: #ffffff; border-right: 1px solid #e3e8ee;}
+    .brand {display: flex; align-items: center; gap: 10px; margin: 4px 0 18px 0;}
+    .brand-mark {width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #0b3c5d, #2a78d6);
+                 display: flex; align-items: center; justify-content: center; font-size: 18px;}
+    .brand-name {font-weight: 700; color: #0f2a3d; line-height: 1.15; font-size: 0.95rem;}
+    .brand-sub {font-weight: 500; color: #7b8794; font-size: 0.72rem;}
+    .hero {background: linear-gradient(120deg, #0b3c5d 0%, #2a78d6 100%); padding: 22px 28px; border-radius: 16px; margin-bottom: 14px;}
+    .hero-eyebrow {color: #cfe3f7; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;}
+    .hero-title {color: #ffffff; font-size: 1.75rem; font-weight: 700; margin: 2px 0 0 0; line-height: 1.2;}
+    [data-testid="stMetric"] {background: #ffffff; border: 1px solid #e3e8ee; border-radius: 14px; padding: 16px 18px;
+                              box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);}
+    [data-testid="stMetricLabel"] p {color: #52606d; font-size: 0.78rem; font-weight: 500;}
+    [data-testid="stMetricValue"] {color: #0f2a3d; font-weight: 700;}
+    [data-testid="stVerticalBlockBorderWrapper"] {background: #ffffff; border-radius: 14px;}
+    h2, h3 {color: #0f2a3d; font-weight: 600;}
+    [data-testid="stCaptionContainer"] {color: #52606d;}
+    [data-testid="stDataFrame"] {border-radius: 12px; overflow: hidden;}
+    div[data-testid="stAlert"] {border-radius: 12px;}
+    .stDownloadButton button {border-radius: 10px; font-weight: 600;}
     </style>
     """,
     unsafe_allow_html=True,
@@ -56,6 +97,27 @@ def show(fig):
     fig.tight_layout()
     st.pyplot(fig)
     plt.close(fig)
+
+
+def new_fig(w=6, h=3.8, horizontal=False):
+    fig, ax = plt.subplots(figsize=(w, h))
+    if horizontal:
+        ax.grid(axis="y", visible=False)
+        ax.grid(axis="x", visible=True)
+    return fig, ax
+
+
+def thousands(ax, axis="y"):
+    fmt = FuncFormatter(lambda v, _: f"{v:,.0f}")
+    (ax.yaxis if axis == "y" else ax.xaxis).set_major_formatter(fmt)
+
+
+def labels(ax, container, fmt="{:,.0f}"):
+    ax.bar_label(container, labels=[fmt.format(v) for v in container.datavalues], padding=3, color=INK2, fontsize=8)
+
+
+def end_label(ax, x, y, text):
+    ax.annotate(text, (x, y), xytext=(6, 0), textcoords="offset points", va="center", fontsize=8, color=INK2)
 
 
 @st.cache_data
@@ -98,18 +160,30 @@ def priority_at(ranking, n):
     return float(ranking["cumulative_priority"].iloc[n - 1]) if n > 0 else 0.0
 
 
-st.sidebar.title("Water Infrastructure Maintenance")
+ICONS = {
+    "Overview": "🏠",
+    "Predicted risk": "📈",
+    "Budget simulator": "💰",
+    "Budget sensitivity": "🎚️",
+    "Model performance": "🎯",
+    "Optimised vs reactive": "⚖️",
+    "Authority view": "🏛️",
+}
+
+st.sidebar.markdown(
+    """
+    <div class="brand">
+      <div class="brand-mark">💧</div>
+      <div><div class="brand-name">Water Infrastructure</div><div class="brand-sub">Maintenance prioritisation</div></div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 page = st.sidebar.radio(
     "View",
-    [
-        "Overview",
-        "Predicted risk",
-        "Budget simulator",
-        "Budget sensitivity",
-        "Model performance",
-        "Optimised vs reactive",
-        "Authority view",
-    ],
+    list(ICONS.keys()),
+    format_func=lambda p: f"{ICONS[p]}  {p}",
+    label_visibility="collapsed",
 )
 
 with st.sidebar.expander("About this dashboard"):
@@ -120,7 +194,15 @@ with st.sidebar.expander("About this dashboard"):
         "Cost values are used as recorded and treated as rand, so budget amounts are indicative."
     )
 
-st.title(page)
+st.markdown(
+    f"""
+    <div class="hero">
+      <div class="hero-eyebrow">National bulk pipelines</div>
+      <div class="hero-title">{ICONS[page]}&nbsp; {page}</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 if page == "Overview":
     st.caption("National bulk pipeline records and how much of them has a condition assessment.")
@@ -136,26 +218,31 @@ if page == "Overview":
     left, right = st.columns(2)
 
     with left:
-        st.subheader("Assessment coverage by province")
-        counts = assets.groupby(["Province", "Assessment"]).size().unstack(fill_value=0)
-        for col in ["Assessed", "Not assessed"]:
-            if col not in counts.columns:
-                counts[col] = 0
-        counts = counts.assign(total=counts.sum(axis=1)).sort_values("total")
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.barh(counts.index, counts["Assessed"], color=BLUE, label="Assessed")
-        ax.barh(counts.index, counts["Not assessed"], left=counts["Assessed"], color=GREY, label="Not assessed")
-        ax.set_xlabel("Number of assets")
-        ax.legend(frameon=False)
-        show(fig)
+        with st.container(border=True):
+            st.subheader("Assessment coverage by province")
+            counts = assets.groupby(["Province", "Assessment"]).size().unstack(fill_value=0)
+            for col in ["Assessed", "Not assessed"]:
+                if col not in counts.columns:
+                    counts[col] = 0
+            counts = counts.assign(total=counts.sum(axis=1)).sort_values("total")
+            fig, ax = new_fig(horizontal=True)
+            ax.barh(counts.index, counts["Assessed"], height=0.62, color=BLUE, edgecolor="white", linewidth=1.5, label="Assessed")
+            ax.barh(counts.index, counts["Not assessed"], left=counts["Assessed"], height=0.62, color=GREY, edgecolor="white", linewidth=1.5, label="Not assessed")
+            ax.set_xlabel("Number of assets")
+            thousands(ax, "x")
+            ax.legend(loc="lower left", bbox_to_anchor=(0, 1.0), ncol=2)
+            show(fig)
 
     with right:
-        st.subheader("Bulk status")
-        status = assets["Bulk Status"].value_counts()
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.bar(status.index.astype(str), status.values, color=TEAL)
-        ax.set_ylabel("Number of assets")
-        show(fig)
+        with st.container(border=True):
+            st.subheader("Bulk status")
+            status = assets["Bulk Status"].value_counts()
+            fig, ax = new_fig()
+            bars = ax.bar(status.index.astype(str), status.values, width=0.55, color=BLUE)
+            labels(ax, bars)
+            ax.set_ylabel("Number of assets")
+            thousands(ax)
+            show(fig)
 
 elif page == "Predicted risk":
     st.caption("Model scores for assets that have no condition assessment.")
@@ -171,22 +258,28 @@ elif page == "Predicted risk":
     left, right = st.columns(2)
 
     with left:
-        st.subheader("Distribution of scores")
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.hist(scored[PROB], bins=40, color=BLUE)
-        ax.axvline(threshold, color=AMBER, linewidth=2)
-        ax.set_xlabel("Predicted maintenance score")
-        ax.set_ylabel("Number of assets")
-        show(fig)
+        with st.container(border=True):
+            st.subheader("Distribution of scores")
+            fig, ax = new_fig()
+            ax.hist(scored[PROB], bins=40, color=BLUE, edgecolor="white", linewidth=0.6)
+            ax.axvline(threshold, color=INK, linewidth=1.4, linestyle="--")
+            ax.text(threshold, ax.get_ylim()[1] * 0.97, f" threshold {threshold:.2f}", color=INK2, fontsize=8, va="top", bbox=dict(facecolor="white", edgecolor="none", pad=1.5, alpha=0.85))
+            ax.set_xlabel("Predicted maintenance score")
+            ax.set_ylabel("Number of assets")
+            thousands(ax)
+            show(fig)
 
     with right:
-        st.subheader("Top 15 feature importances")
-        top = importances.head(15).sort_values()
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.barh(top.index, top.values, color=TEAL)
-        ax.set_xlabel("Impurity-based importance")
-        show(fig)
-        st.caption("Importance shows which variables the model relies on, not what causes maintenance need.")
+        with st.container(border=True):
+            st.subheader("Top 15 feature importances")
+            top = importances.head(15).sort_values()
+            fig, ax = new_fig(h=4.4, horizontal=True)
+            bars = ax.barh(top.index, top.values, height=0.62, color=BLUE)
+            labels(ax, bars, "{:.3f}")
+            ax.set_xlabel("Impurity-based importance")
+            ax.set_xlim(0, top.values.max() * 1.15)
+            show(fig)
+            st.caption("Importance shows which variables the model relies on, not what causes maintenance need.")
 
     st.subheader("Highest-scoring assets")
     table = scored
@@ -229,20 +322,27 @@ elif page == "Budget simulator":
     left, right = st.columns(2)
 
     with left:
-        st.subheader("Selected assets by province")
-        by_province = selected["Province"].value_counts().sort_values()
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.barh(by_province.index.astype(str), by_province.values, color=BLUE)
-        ax.set_xlabel("Assets selected")
-        show(fig)
+        with st.container(border=True):
+            st.subheader("Selected assets by province")
+            by_province = selected["Province"].value_counts().sort_values()
+            fig, ax = new_fig(horizontal=True)
+            bars = ax.barh(by_province.index.astype(str), by_province.values, height=0.62, color=BLUE)
+            labels(ax, bars)
+            ax.set_xlabel("Assets selected")
+            ax.set_xlim(0, max(by_province.values.max(), 1) * 1.15)
+            thousands(ax, "x")
+            show(fig)
 
     with right:
-        st.subheader("Assessed and not assessed")
-        by_assessment = selected["Assessment"].value_counts()
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.bar(by_assessment.index.astype(str), by_assessment.values, color=[BLUE, GREY][: len(by_assessment)])
-        ax.set_ylabel("Assets selected")
-        show(fig)
+        with st.container(border=True):
+            st.subheader("Assessed and not assessed")
+            by_assessment = selected["Assessment"].value_counts()
+            fig, ax = new_fig()
+            bars = ax.bar(by_assessment.index.astype(str), by_assessment.values, width=0.5, color=[BLUE, GREY][: len(by_assessment)])
+            labels(ax, bars)
+            ax.set_ylabel("Assets selected")
+            thousands(ax)
+            show(fig)
 
     st.subheader("Recommended maintenance schedule")
     st.caption(f"First 100 of {n:,} selected assets, in selection order.")
@@ -282,28 +382,35 @@ elif page == "Budget sensitivity":
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        st.subheader("Priority captured")
-        fig, ax = plt.subplots(figsize=(5, 3.6))
-        ax.plot(sens["Budget (%)"], sens["Total priority captured"], marker="o", color=BLUE)
-        ax.set_xlabel("Budget (% of total cost)")
-        ax.set_ylabel("Total priority captured")
-        show(fig)
+        with st.container(border=True):
+            st.subheader("Priority captured")
+            fig, ax = new_fig(5, 3.4)
+            ax.plot(sens["Budget (%)"], sens["Total priority captured"], marker="o", markersize=6, markeredgecolor="white", markeredgewidth=1.5, linewidth=2, color=BLUE)
+            ax.set_xlabel("Budget (% of total cost)")
+            ax.set_ylabel("Total priority captured")
+            thousands(ax)
+            show(fig)
 
     with c2:
-        st.subheader("Assets selected")
-        fig, ax = plt.subplots(figsize=(5, 3.6))
-        ax.plot(sens["Budget (%)"], sens["Assets selected"], marker="o", color=AMBER)
-        ax.set_xlabel("Budget (% of total cost)")
-        ax.set_ylabel("Assets selected")
-        show(fig)
+        with st.container(border=True):
+            st.subheader("Assets selected")
+            fig, ax = new_fig(5, 3.4)
+            ax.plot(sens["Budget (%)"], sens["Assets selected"], marker="o", markersize=6, markeredgecolor="white", markeredgewidth=1.5, linewidth=2, color=BLUE)
+            ax.set_xlabel("Budget (% of total cost)")
+            ax.set_ylabel("Assets selected")
+            thousands(ax)
+            show(fig)
 
     with c3:
-        st.subheader("Gain per extra 1% of budget")
-        fig, ax = plt.subplots(figsize=(5, 3.6))
-        ax.bar(sens["Budget (%)"].astype(str), sens["Priority gained per extra 1%"], color=TEAL)
-        ax.set_xlabel("Budget level (%)")
-        ax.set_ylabel("Priority per percentage point")
-        show(fig)
+        with st.container(border=True):
+            st.subheader("Gain per extra 1% of budget")
+            fig, ax = new_fig(5, 3.4)
+            bars = ax.bar(sens["Budget (%)"].astype(str), sens["Priority gained per extra 1%"], width=0.6, color=BLUE)
+            labels(ax, bars, "{:,.0f}")
+            ax.set_xlabel("Budget level (%)")
+            ax.set_ylabel("Priority per percentage point")
+            thousands(ax)
+            show(fig)
 
     st.dataframe(
         sens.round(2),
@@ -332,21 +439,25 @@ elif page == "Model performance":
     left, right = st.columns(2)
 
     with left:
-        st.subheader("Precision, recall and F1 by class")
-        metrics = ["precision", "recall", "f1-score"]
-        x = np.arange(len(metrics))
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.bar(x - 0.2, [report.loc["0", m] for m in metrics], width=0.4, color=GREY, label="No maintenance needed")
-        ax.bar(x + 0.2, [report.loc["1", m] for m in metrics], width=0.4, color=BLUE, label="Needs maintenance")
-        ax.set_xticks(x)
-        ax.set_xticklabels(metrics)
-        ax.set_ylim(0, 1.05)
-        ax.legend(frameon=False, loc="lower right")
-        show(fig)
+        with st.container(border=True):
+            st.subheader("Precision, recall and F1 by class")
+            metrics = ["precision", "recall", "f1-score"]
+            x = np.arange(len(metrics))
+            fig, ax = new_fig()
+            b0 = ax.bar(x - 0.2, [report.loc["0", m] for m in metrics], width=0.36, color=GREY, edgecolor="white", linewidth=1.5, label="No maintenance needed")
+            b1 = ax.bar(x + 0.2, [report.loc["1", m] for m in metrics], width=0.36, color=BLUE, edgecolor="white", linewidth=1.5, label="Needs maintenance")
+            labels(ax, b0, "{:.3f}")
+            labels(ax, b1, "{:.3f}")
+            ax.set_xticks(x)
+            ax.set_xticklabels(metrics)
+            ax.set_ylim(0, 1.12)
+            ax.legend(loc="upper center", ncol=2, bbox_to_anchor=(0.5, -0.12))
+            show(fig)
 
     with right:
-        st.subheader("Full report")
-        st.dataframe(report.round(3))
+        with st.container(border=True):
+            st.subheader("Full report")
+            st.dataframe(report.round(3))
 
 elif page == "Optimised vs reactive":
     st.caption(
@@ -355,7 +466,7 @@ elif page == "Optimised vs reactive":
     )
     comparison = pd.read_csv(f"{DATA_DIR}/reactive_vs_optimised_comparison.csv")
     comparison["Selected that are genuine needs"] = comparison["true_positives_captured"] / comparison["n_selected"]
-    colours = {"ML-prioritised": BLUE, "Reactive (random)": RED}
+    colours = {"ML-prioritised": BLUE, "Reactive (random)": ORANGE}
 
     levels = sorted(comparison["budget"].unique())
     level = st.select_slider("Budget level", options=levels, format_func=lambda v: f"R{v / 1e6:,.1f} million")
@@ -372,28 +483,34 @@ elif page == "Optimised vs reactive":
     left, right = st.columns(2)
 
     with left:
-        st.subheader("Share of genuine needs captured")
-        fig, ax = plt.subplots(figsize=(6, 4))
-        for strategy, group in comparison.groupby("strategy"):
-            ax.plot(group["budget"] / 1e6, group["recall_of_true_needs"], marker="o",
-                    color=colours.get(strategy, GREY), label=strategy)
-        ax.axvline(level / 1e6, color=AMBER, linewidth=2)
-        ax.set_xlabel("Budget (R million)")
-        ax.set_ylabel("Share of genuine needs captured")
-        ax.legend(frameon=False)
-        show(fig)
+        with st.container(border=True):
+            st.subheader("Share of genuine needs captured")
+            fig, ax = new_fig()
+            for strategy, group in comparison.groupby("strategy"):
+                ax.plot(group["budget"] / 1e6, group["recall_of_true_needs"], marker="o", markersize=6,
+                        markeredgecolor="white", markeredgewidth=1.5, linewidth=2,
+                        color=colours.get(strategy, GREY), label=strategy)
+            ax.axvline(level / 1e6, color=INK, linewidth=1.2, linestyle="--")
+            ax.set_xlabel("Budget (R million)")
+            ax.set_ylabel("Share of genuine needs captured")
+            ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v * 100:.0f}%"))
+            ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2)
+            show(fig)
 
     with right:
-        st.subheader("Assets selected")
-        fig, ax = plt.subplots(figsize=(6, 4))
-        for strategy, group in comparison.groupby("strategy"):
-            ax.plot(group["budget"] / 1e6, group["n_selected"], marker="o",
-                    color=colours.get(strategy, GREY), label=strategy)
-        ax.axvline(level / 1e6, color=AMBER, linewidth=2)
-        ax.set_xlabel("Budget (R million)")
-        ax.set_ylabel("Assets selected")
-        ax.legend(frameon=False)
-        show(fig)
+        with st.container(border=True):
+            st.subheader("Assets selected")
+            fig, ax = new_fig()
+            for strategy, group in comparison.groupby("strategy"):
+                ax.plot(group["budget"] / 1e6, group["n_selected"], marker="o", markersize=6,
+                        markeredgecolor="white", markeredgewidth=1.5, linewidth=2,
+                        color=colours.get(strategy, GREY), label=strategy)
+            ax.axvline(level / 1e6, color=INK, linewidth=1.2, linestyle="--")
+            ax.set_xlabel("Budget (R million)")
+            ax.set_ylabel("Assets selected")
+            thousands(ax)
+            ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2)
+            show(fig)
 
     st.info(
         "Many test assets have a recorded cost of zero. The ratio rule selects them first, "
@@ -425,11 +542,15 @@ elif page == "Authority view":
     top_n = st.slider("Number of authorities to show", 5, 30, 15)
     top_wsa = wsa.sort_values("count", ascending=False).head(top_n)
 
-    fig, ax = plt.subplots(figsize=(8, 5))
-    plot_data = top_wsa["mean"].sort_values()
-    ax.barh(plot_data.index.astype(str), plot_data.values, color=BLUE)
-    ax.set_xlabel("Mean predicted maintenance score")
-    show(fig)
+    with st.container(border=True):
+        st.subheader("Mean score by authority")
+        fig, ax = new_fig(8, max(3.6, 0.32 * top_n + 1), horizontal=True)
+        plot_data = top_wsa["mean"].sort_values()
+        bars = ax.barh(plot_data.index.astype(str), plot_data.values, height=0.62, color=BLUE)
+        labels(ax, bars, "{:.2f}")
+        ax.set_xlabel("Mean predicted maintenance score")
+        ax.set_xlim(0, max(plot_data.values.max(), 0.01) * 1.12)
+        show(fig)
 
     st.dataframe(
         top_wsa.rename(columns={"mean": "mean score", "std": "within-authority std", "count": "assets scored"}).round(4)
