@@ -9,14 +9,16 @@ DATA_DIR = "saved_outputs"
 PROB = "predicted_maintenance_probability"
 WSA = "Water Service Authority Name"
 
-BLUE = "#2a78d6"
-ORANGE = "#eb6834"
-GREY = "#b4bcc4"
-INK = "#0f2a3d"
-INK2 = "#52606d"
-GRID = "#e6ebf0"
+BLUE = "#266CA9"
+LIGHT = "#ADE1FB"
+INDIGO = "#0F2573"
+NAVY = "#041D56"
+DEEP = "#01082D"
+INK = DEEP
+INK2 = "#4a5a7a"
+GRID = "#e4ebf3"
 
-st.set_page_config(page_title="Water Infrastructure Maintenance", page_icon="💧", layout="wide")
+st.set_page_config(page_title="Water Infrastructure Maintenance", layout="wide")
 
 plt.rcParams.update({
     "figure.dpi": 200,
@@ -50,25 +52,28 @@ st.markdown(
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     html, body, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {font-family: 'Inter', sans-serif;}
-    [data-testid="stAppViewContainer"] {background: #f5f7fa;}
+    [data-testid="stAppViewContainer"] {background: #f3f7fb;}
     [data-testid="stHeader"] {background: transparent;}
     .block-container {padding-top: 1.6rem; max-width: 1280px;}
-    [data-testid="stSidebar"] {background: #ffffff; border-right: 1px solid #e3e8ee;}
-    .brand {display: flex; align-items: center; gap: 10px; margin: 4px 0 18px 0;}
-    .brand-mark {width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #0b3c5d, #2a78d6);
-                 display: flex; align-items: center; justify-content: center; font-size: 18px;}
-    .brand-name {font-weight: 700; color: #0f2a3d; line-height: 1.15; font-size: 0.95rem;}
-    .brand-sub {font-weight: 500; color: #7b8794; font-size: 0.72rem;}
-    .hero {background: linear-gradient(120deg, #0b3c5d 0%, #2a78d6 100%); padding: 22px 28px; border-radius: 16px; margin-bottom: 14px;}
-    .hero-eyebrow {color: #cfe3f7; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;}
+    [data-testid="stSidebar"] {background: #ffffff; border-right: 1px solid #dfe8f1;}
+    .brand {display: flex; align-items: center; gap: 14px; margin: 6px 0 22px 4px;}
+    .brand-mark {width: 22px; height: 22px; background: linear-gradient(135deg, #266CA9, #0F2573);
+                 border-radius: 50% 50% 50% 0; transform: rotate(-45deg); margin-left: 4px;}
+    .brand-name {font-weight: 700; color: #041D56; line-height: 1.15; font-size: 0.95rem;}
+    .brand-sub {font-weight: 500; color: #6b7a99; font-size: 0.72rem;}
+    [data-testid="stSidebar"] div[role="radiogroup"] > label {padding: 8px 10px; border-radius: 8px; margin-bottom: 2px;}
+    [data-testid="stSidebar"] div[role="radiogroup"] > label:has(input:checked) {background: #e6f4fd;}
+    [data-testid="stSidebar"] div[role="radiogroup"] > label:has(input:checked) p {color: #0F2573; font-weight: 600;}
+    .hero {background: linear-gradient(120deg, #01082D 0%, #0F2573 55%, #266CA9 100%); padding: 24px 30px; border-radius: 16px; margin-bottom: 14px;}
+    .hero-eyebrow {color: #ADE1FB; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;}
     .hero-title {color: #ffffff; font-size: 1.75rem; font-weight: 700; margin: 2px 0 0 0; line-height: 1.2;}
-    [data-testid="stMetric"] {background: #ffffff; border: 1px solid #e3e8ee; border-radius: 14px; padding: 16px 18px;
-                              box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);}
-    [data-testid="stMetricLabel"] p {color: #52606d; font-size: 0.78rem; font-weight: 500;}
-    [data-testid="stMetricValue"] {color: #0f2a3d; font-weight: 700;}
+    [data-testid="stMetric"] {background: #ffffff; border: 1px solid #dfe8f1; border-left: 4px solid #266CA9; border-radius: 12px;
+                              padding: 16px 18px; box-shadow: 0 1px 2px rgba(1, 8, 45, 0.05);}
+    [data-testid="stMetricLabel"] p {color: #4a5a7a; font-size: 0.78rem; font-weight: 500;}
+    [data-testid="stMetricValue"] {color: #041D56; font-weight: 700;}
     [data-testid="stVerticalBlockBorderWrapper"] {background: #ffffff; border-radius: 14px;}
-    h2, h3 {color: #0f2a3d; font-weight: 600;}
-    [data-testid="stCaptionContainer"] {color: #52606d;}
+    h2, h3 {color: #041D56; font-weight: 600;}
+    [data-testid="stCaptionContainer"] {color: #4a5a7a;}
     [data-testid="stDataFrame"] {border-radius: 12px; overflow: hidden;}
     div[data-testid="stAlert"] {border-radius: 12px;}
     .stDownloadButton button {border-radius: 10px; font-weight: 600;}
@@ -160,31 +165,26 @@ def priority_at(ranking, n):
     return float(ranking["cumulative_priority"].iloc[n - 1]) if n > 0 else 0.0
 
 
-ICONS = {
-    "Overview": "🏠",
-    "Predicted risk": "📈",
-    "Budget simulator": "💰",
-    "Budget sensitivity": "🎚️",
-    "Model performance": "🎯",
-    "Optimised vs reactive": "⚖️",
-    "Authority view": "🏛️",
-}
+PAGES = [
+    "Overview",
+    "Predicted risk",
+    "Budget simulator",
+    "Budget sensitivity",
+    "Model performance",
+    "Optimised vs reactive",
+    "Authority view",
+]
 
 st.sidebar.markdown(
     """
     <div class="brand">
-      <div class="brand-mark">💧</div>
+      <div class="brand-mark"></div>
       <div><div class="brand-name">Water Infrastructure</div><div class="brand-sub">Maintenance prioritisation</div></div>
     </div>
     """,
     unsafe_allow_html=True,
 )
-page = st.sidebar.radio(
-    "View",
-    list(ICONS.keys()),
-    format_func=lambda p: f"{ICONS[p]}  {p}",
-    label_visibility="collapsed",
-)
+page = st.sidebar.radio("View", PAGES, label_visibility="collapsed")
 
 with st.sidebar.expander("About this dashboard"):
     st.write(
@@ -198,7 +198,7 @@ st.markdown(
     f"""
     <div class="hero">
       <div class="hero-eyebrow">National bulk pipelines</div>
-      <div class="hero-title">{ICONS[page]}&nbsp; {page}</div>
+      <div class="hero-title">{page}</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -227,7 +227,7 @@ if page == "Overview":
             counts = counts.assign(total=counts.sum(axis=1)).sort_values("total")
             fig, ax = new_fig(horizontal=True)
             ax.barh(counts.index, counts["Assessed"], height=0.62, color=BLUE, edgecolor="white", linewidth=1.5, label="Assessed")
-            ax.barh(counts.index, counts["Not assessed"], left=counts["Assessed"], height=0.62, color=GREY, edgecolor="white", linewidth=1.5, label="Not assessed")
+            ax.barh(counts.index, counts["Not assessed"], left=counts["Assessed"], height=0.62, color=LIGHT, edgecolor="white", linewidth=1.5, label="Not assessed")
             ax.set_xlabel("Number of assets")
             thousands(ax, "x")
             ax.legend(loc="lower left", bbox_to_anchor=(0, 1.0), ncol=2)
@@ -338,7 +338,7 @@ elif page == "Budget simulator":
             st.subheader("Assessed and not assessed")
             by_assessment = selected["Assessment"].value_counts()
             fig, ax = new_fig()
-            bars = ax.bar(by_assessment.index.astype(str), by_assessment.values, width=0.5, color=[BLUE, GREY][: len(by_assessment)])
+            bars = ax.bar(by_assessment.index.astype(str), by_assessment.values, width=0.5, color=[BLUE if a == "Assessed" else LIGHT for a in by_assessment.index])
             labels(ax, bars)
             ax.set_ylabel("Assets selected")
             thousands(ax)
@@ -444,7 +444,7 @@ elif page == "Model performance":
             metrics = ["precision", "recall", "f1-score"]
             x = np.arange(len(metrics))
             fig, ax = new_fig()
-            b0 = ax.bar(x - 0.2, [report.loc["0", m] for m in metrics], width=0.36, color=GREY, edgecolor="white", linewidth=1.5, label="No maintenance needed")
+            b0 = ax.bar(x - 0.2, [report.loc["0", m] for m in metrics], width=0.36, color=LIGHT, edgecolor="white", linewidth=1.5, label="No maintenance needed")
             b1 = ax.bar(x + 0.2, [report.loc["1", m] for m in metrics], width=0.36, color=BLUE, edgecolor="white", linewidth=1.5, label="Needs maintenance")
             labels(ax, b0, "{:.3f}")
             labels(ax, b1, "{:.3f}")
@@ -466,7 +466,7 @@ elif page == "Optimised vs reactive":
     )
     comparison = pd.read_csv(f"{DATA_DIR}/reactive_vs_optimised_comparison.csv")
     comparison["Selected that are genuine needs"] = comparison["true_positives_captured"] / comparison["n_selected"]
-    colours = {"ML-prioritised": BLUE, "Reactive (random)": ORANGE}
+    colours = {"ML-prioritised": BLUE, "Reactive (random)": DEEP}
 
     levels = sorted(comparison["budget"].unique())
     level = st.select_slider("Budget level", options=levels, format_func=lambda v: f"R{v / 1e6:,.1f} million")
@@ -489,8 +489,9 @@ elif page == "Optimised vs reactive":
             for strategy, group in comparison.groupby("strategy"):
                 ax.plot(group["budget"] / 1e6, group["recall_of_true_needs"], marker="o", markersize=6,
                         markeredgecolor="white", markeredgewidth=1.5, linewidth=2,
-                        color=colours.get(strategy, GREY), label=strategy)
-            ax.axvline(level / 1e6, color=INK, linewidth=1.2, linestyle="--")
+                        linestyle="--" if strategy.startswith("Reactive") else "-",
+                        color=colours.get(strategy, LIGHT), label=strategy)
+            ax.axvline(level / 1e6, color=LIGHT, linewidth=7, alpha=0.9, zorder=0)
             ax.set_xlabel("Budget (R million)")
             ax.set_ylabel("Share of genuine needs captured")
             ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v * 100:.0f}%"))
@@ -504,8 +505,9 @@ elif page == "Optimised vs reactive":
             for strategy, group in comparison.groupby("strategy"):
                 ax.plot(group["budget"] / 1e6, group["n_selected"], marker="o", markersize=6,
                         markeredgecolor="white", markeredgewidth=1.5, linewidth=2,
-                        color=colours.get(strategy, GREY), label=strategy)
-            ax.axvline(level / 1e6, color=INK, linewidth=1.2, linestyle="--")
+                        linestyle="--" if strategy.startswith("Reactive") else "-",
+                        color=colours.get(strategy, LIGHT), label=strategy)
+            ax.axvline(level / 1e6, color=LIGHT, linewidth=7, alpha=0.9, zorder=0)
             ax.set_xlabel("Budget (R million)")
             ax.set_ylabel("Assets selected")
             thousands(ax)
